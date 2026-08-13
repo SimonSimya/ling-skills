@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "ling-skills",
+  "description": "Ling's shared skill library. Skills are portable processes: build one, publish it here, let anyone fork it.",
+  "version": "0.1.0",
+  "owner": {
+    "name": "Ling leadership",
+    "email": "simon@ling-app.com"
+  },
+  "metadata": {
+    "pluginRoot": "./plugins"
+  },
+  "plugins": [
+    {
+      "name": "feedback-tools",
+      "source": "feedback-tools",
+      "description": "Turn a batch of raw user feedback into a frequency-weighted, prioritized list of themes with owners.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Simon Bacher"
+      }
+    }
+  ]
+}
