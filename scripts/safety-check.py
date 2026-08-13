@@ -4,14 +4,35 @@
 Usage: python3 scripts/safety-check.py <path-to-skill-folder> [...]
 
 Exit 0 = clean. Exit 1 = blockers found. Warnings never fail the build.
-The blockers are the three things that actually bite: secrets, machine-specific
-paths, and references to files outside the skill folder (which break on install,
-because plugins are copied to a cache).
+Four categories, matching the AH course's safety review: secrets, personal/
+machine-specific paths, references escaping the skill folder (breaks on
+install, plugins are copied to a cache), and dangerous or too-machine-specific
+scripts (destructive commands, credential-store reads, exfiltration).
 """
 
 import re
 import sys
 from pathlib import Path
+
+# Dangerous or too-machine-specific behavior, the 4th category in the lesson's
+# safety review (secrets / personal data / broken refs / dangerous scripts).
+# Ported from .claude/skills/export-skill/SKILL.md's block-export checklist.
+DANGEROUS = [
+    (r"\bcurl\b[^\n|]*\|\s*(sudo\s+)?(ba)?sh\b", "curl piped into a shell"),
+    (r"\bwget\b[^\n|]*\|\s*(sudo\s+)?(ba)?sh\b", "wget piped into a shell"),
+    (r"\beval\s*\(\s*(base64|atob|Buffer\.from)", "eval of decoded/obfuscated content"),
+    (r"\bexec\s*\(\s*(base64|atob|requests\.get|urlopen|fetch)", "exec of downloaded/obfuscated content"),
+    (r"\brm\s+-rf\s+(/(?!tmp|private/tmp)\S*|~(?!/(Downloads|Desktop|tmp))\S*|\$HOME\b)",
+     "rm -rf against a broad or home-relative path"),
+    (r"\bchmod\s+(-R\s+)?777\b", "chmod 777"),
+    (r"(?<![\w/])(/etc|/usr|/bin|/sbin|/System)/\S", "write target under a system directory"),
+    (r"\bcrontab\b\s+-", "crontab edit"),
+    (r"~/\.ssh\b|~/\.aws\b|Login Data|Cookies\.sqlite|keychain\b(?!.*#)",
+     "reads SSH keys, cloud creds, browser credential stores, or the keychain"),
+    (r"(?i)\bpost(ing)?\b[^\n]{0,40}\b(env|environ|\.env|credentials?|secrets?)\b[^\n]{0,40}"
+     r"\b(http|https|fetch|requests?\.(post|put))\b",
+     "posts env vars or credentials to a network endpoint"),
+]
 
 SECRETS = [
     (r"AIza[0-9A-Za-z_\-]{30,}", "Google API key"),
@@ -101,6 +122,9 @@ def scan(folder: Path):
             for pattern, label in ESCAPES:
                 if re.search(pattern, line):
                     blockers.append((rel, n, f"{label}: breaks once the plugin is cached"))
+            for pattern, label in DANGEROUS:
+                if re.search(pattern, line):
+                    blockers.append((rel, n, f"{label}: dangerous or too machine-specific to publish"))
 
     skill_md = folder / "SKILL.md"
     if skill_md.is_file():

@@ -49,6 +49,13 @@ Every skill declares one, in its `## About` section:
 - **draft-only**: produces drafts, messages, or files for a human to send or keep. The right level for most useful skills.
 - **can-send**: writes to an external system, sends, publishes, or spends. Needs a named owner and a second reviewer on the PR.
 
+## If you push a secret by accident
+
+Delete it from the repo, rotate the key immediately, and clean the git history if the commit
+already synced to anyone. Do not just delete the line and pretend the internet forgot: a deleted
+line still lives in every prior commit until history is rewritten, and git history is exactly what
+this repo is for.
+
 ## Forking without losing updates
 
 Forking is encouraged; that is the point of the library. To customize a skill and still get
