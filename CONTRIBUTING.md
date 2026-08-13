@@ -45,9 +45,9 @@ Demystifier for anyone who thinks evals are an engineering thing: when you read 
 
 Every skill declares one, in its `## About` section:
 
-- **read-only** — reads data, writes nothing. Default. Install without thinking about it.
-- **draft-only** — produces drafts, messages, or files for a human to send or keep. The right level for most useful skills.
-- **can-send** — writes to an external system, sends, publishes, or spends. Needs a named owner and a second reviewer on the PR.
+- **read-only**: reads data, writes nothing. Default. Install without thinking about it.
+- **draft-only**: produces drafts, messages, or files for a human to send or keep. The right level for most useful skills.
+- **can-send**: writes to an external system, sends, publishes, or spends. Needs a named owner and a second reviewer on the PR.
 
 ## Forking without losing updates
 

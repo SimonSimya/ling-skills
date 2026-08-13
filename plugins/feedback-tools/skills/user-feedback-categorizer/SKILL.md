@@ -5,7 +5,7 @@ description: >-
   reasons, interview notes) and turn it into a frequency-weighted, prioritized list of themes you
   can act on. Use whenever you paste user feedback and want it clustered, counted, and prioritized,
   however you phrase it: "categorize this", "group these by theme", "what are users complaining
-  about most", "rank by how often it's mentioned", "what should we fix first" — even across several
+  about most", "rank by how often it's mentioned", "what should we fix first", even across several
   messages. Output is a ranked theme table tied to product priorities, NOT a raw restatement. Do NOT
   use for analytics/metrics questions (that's product/data work) or for drafting replies to
   individual users.
@@ -21,10 +21,10 @@ prioritized signal. This skill encodes the shape so the output is consistent and
 Read these from your own workspace if they exist. Skip any that don't; the skill still works, it
 just can't map themes to segments.
 
-- `00-brain/customers.md` — ICP, segments, known pains and objections. Map themes to these where possible.
-- `00-brain/current-state.md` — active product priorities and the North Star, so prioritization ties to what the company is actually steering toward.
-- `00-brain/business-profile.md` — product surfaces (App / Web / Live) so feedback is attributed to the right area.
-- `00-brain/brand-voice.md` — the register to write the summary in.
+- `00-brain/customers.md`: ICP, segments, known pains and objections. Map themes to these where possible.
+- `00-brain/current-state.md`: active product priorities and the North Star, so prioritization ties to what the company is actually steering toward.
+- `00-brain/business-profile.md`: product surfaces (App / Web / Live) so feedback is attributed to the right area.
+- `00-brain/brand-voice.md`: the register to write the summary in.
 
 ## 2. Handle staged input
 
@@ -38,7 +38,7 @@ proceed.
 1. **Cluster** every item into themes. Derive themes from the data; don't force a fixed taxonomy. Typical Ling clusters: content quality/errors, course progression/difficulty, pricing/paywall, bugs/crashes, missing languages, UX/navigation, audio/voice, gamification/streaks, support responsiveness.
 2. **Count** mentions per theme. An item can hit more than one theme; note when it does.
 3. **Weight by importance**, not just raw count. Factor in frequency, severity (does it block learning, cause churn, hit paying users), and which segment it comes from (a paying heritage-learner complaint outweighs a free-tier nice-to-have).
-4. **Capture verbatim signal.** Keep one or two short representative quotes per top theme; they carry more than a paraphrase.
+4. **Capture verbatim signal.** Keep one or two short representative quotes per top theme; they carry more than a paraphrase. **Redact as you go:** strip names, emails, order numbers, and anything else that identifies an individual user. A quote is evidence about the product, not about the person.
 
 ## 4. Output
 
@@ -49,9 +49,9 @@ A ranked table, highest-priority first:
 
 Then below it:
 
-- **Top 3 to act on** — one line each on the *why* (frequency x severity x segment), tied to a product priority or the North Star where relevant.
-- **Watch list** — low-frequency but high-severity items not yet worth committing to.
-- **Noise** — anything safe to discount, briefly, so the reader sees you considered it.
+- **Top 3 to act on**: one line each on the *why* (frequency x severity x segment), tied to a product priority or the North Star where relevant.
+- **Watch list**: low-frequency but high-severity items not yet worth committing to.
+- **Noise**: anything safe to discount, briefly, so the reader sees you considered it.
 
 Keep it tight and decision-ready. Match your own voice: direct, no fluff, give the counter-case if
 the data is ambiguous.
@@ -72,5 +72,9 @@ message. Sending is a human decision.
 
 ## About
 
-Adapted for the Ling skills marketplace from Simon's WorkOS pilot. **Privilege level: read-only.**
-It reads what you paste plus your own brain files, and writes nothing.
+Adapted for the Ling skills marketplace from Simon's WorkOS pilot.
+
+**Privilege level: read-only.** Concretely: it reads what you paste, plus the four `00-brain/`
+files listed in step 1 if they exist in your workspace. It writes nothing, sends nothing, and
+touches no external system. The optional handoff in step 6 is a suggestion for you to act on, not
+an action it takes.

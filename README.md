@@ -8,10 +8,13 @@ makes it better, everyone gets the better version instead of it dying on one lap
 
 ## Install it (once, about 30 seconds)
 
-In Claude Code:
+> **Not on GitHub yet.** Until it is, add it from a local clone. Once the repo is pushed, replace
+> the path below with `<org>/ling-skills` and everything else stays the same.
+
+In Claude Code, from the directory holding this folder:
 
 ```
-/plugin marketplace add Ling-app/ling-skills
+/plugin marketplace add ./ling-skills
 ```
 
 Then install what you want:
@@ -28,9 +31,6 @@ Later, to pick up everyone else's improvements:
 
 Skills from a plugin are namespaced, so the one above runs as
 `/feedback-tools:user-feedback-categorizer`.
-
-> Before the repo is on GitHub you can add it straight from disk:
-> `/plugin marketplace add /Users/simon/develop/ling-skills`
 
 ## What's in it
 

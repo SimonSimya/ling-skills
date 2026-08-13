@@ -6,7 +6,10 @@
 #
 # Usage: scripts/adoption.sh [since]        e.g. scripts/adoption.sh "6 weeks ago"
 
-set -euo pipefail
+# Deliberately NOT pipefail: every section here ends in `head`/`grep -q`, which
+# close their pipe early and SIGPIPE the upstream `git log`. Under pipefail that
+# reads as failure and the script reports "none" over real data.
+set -eu
 cd "$(dirname "$0")/.."
 
 SINCE="${1:-3 months ago}"
@@ -20,18 +23,24 @@ echo "Ling skills dojo, adoption since ${SINCE}"
 echo
 
 echo "== Skills in the library =="
-find plugins -type d -name skills -exec sh -c 'ls -1 "$1" 2>/dev/null' _ {} \; \
-  | sort -u | sed 's/^/  /' || true
-count=$(find plugins -mindepth 3 -maxdepth 3 -type d -path '*/skills/*' 2>/dev/null | wc -l | tr -d ' ')
-echo "  (${count} total)"
+# Directories only, at the exact depth, so the list and the count cannot disagree.
+skills=$(find plugins -mindepth 3 -maxdepth 3 -type d -path '*/skills/*' | sort)
+if [ -z "$skills" ]; then
+  echo "  (empty)"
+else
+  echo "$skills" | while IFS= read -r s; do echo "  $(basename "$s")"; done
+  echo "  ($(echo "$skills" | wc -l | tr -d ' ') total)"
+fi
 echo
 
 echo "== Contributors =="
-if ! git log --since="${SINCE}" --format='%aN' 2>/dev/null | grep -q .; then
+authors=$(git log --since="${SINCE}" --format='%aN' | sort | uniq -c | sort -rn)
+if [ -z "$authors" ]; then
   echo "  no commits in this window"
 else
-  git log --since="${SINCE}" --format='%aN' | sort | uniq -c | sort -rn \
-    | awk '{printf "  %-28s %s commits\n", substr($0, index($0,$2)), $1}'
+  # Tab-separate first so names containing digits or spaces cannot be mis-split.
+  echo "$authors" | sed -E 's/^ *([0-9]+) (.*)$/\2\t\1/' \
+    | awk -F'\t' '{printf "  %-28s %s commits\n", $1, $2}'
 fi
 echo
 

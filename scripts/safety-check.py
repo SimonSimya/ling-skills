@@ -17,12 +17,18 @@ SECRETS = [
     (r"AIza[0-9A-Za-z_\-]{30,}", "Google API key"),
     (r"sk-[A-Za-z0-9]{20,}", "OpenAI-style secret key"),
     (r"sk-ant-[A-Za-z0-9\-_]{20,}", "Anthropic API key"),
-    (r"ghp_[A-Za-z0-9]{20,}", "GitHub personal access token"),
+    (r"ghp_[A-Za-z0-9]{20,}", "GitHub classic token"),
+    (r"github_pat_[A-Za-z0-9_]{20,}", "GitHub fine-grained token"),
+    (r"gh[opsu]_[A-Za-z0-9]{20,}", "GitHub OAuth/app token"),
+    (r"glpat-[A-Za-z0-9_\-]{10,}", "GitLab personal access token"),
     (r"xox[baprs]-[A-Za-z0-9\-]{10,}", "Slack token"),
     (r"ntn_[A-Za-z0-9]{20,}", "Notion token"),
+    (r"AKIA[0-9A-Z]{16}", "AWS access key id"),
+    (r"-----BEGIN [A-Z ]*PRIVATE KEY-----", "private key material"),
     (r"Bearer\s+[A-Za-z0-9._\-]{20,}", "hardcoded bearer token"),
-    (r"(?i)(api_key|apikey|secret|password|token)\s*[:=]\s*[\"'][^\"'{$\s]{8,}[\"']",
-     "hardcoded credential"),
+    # Quoted or bare. Bare form is how .env and YAML actually leak.
+    (r"(?i)\b(api[_-]?key|secret|password|passwd|token|client[_-]?secret)\b\s*[:=]\s*"
+     r"[\"']?[^\s\"'{$<>][^\s\"']{7,}", "hardcoded credential"),
 ]
 
 # Personal / machine-specific paths.
@@ -30,15 +36,24 @@ PATHS = [
     (r"/Users/[A-Za-z0-9._\-]+/", "absolute macOS home path"),
     (r"/home/[A-Za-z0-9._\-]+/", "absolute Linux home path"),
     (r"C:\\\\Users\\\\", "absolute Windows path"),
+    (r"(?<![\w.])~/", "home-relative path (only resolves on your machine)"),
 ]
 
 # Escapes the skill folder. Breaks once the plugin is cached.
 ESCAPES = [(r"\.\./", "relative path escaping the skill folder")]
 
 JUNK = {".DS_Store", "__pycache__", ".git", "node_modules", ".venv", "venv",
-        ".pytest_cache", ".env"}
+        ".pytest_cache"}
 
-TEXT_SUFFIXES = {".md", ".py", ".js", ".ts", ".sh", ".json", ".yaml", ".yml", ".txt", ".toml"}
+# Files that must never ship, whatever their contents.
+FORBIDDEN_NAMES = {".env", ".netrc", "id_rsa", "id_ed25519", "credentials"}
+FORBIDDEN_SUFFIXES = {".pem", ".p12", ".pfx", ".key", ".keystore"}
+
+# Scan everything except known-binary formats. An allowlist silently skips
+# whatever file type nobody thought of, which is where secrets hide.
+BINARY_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".pdf", ".zip",
+                   ".gz", ".tgz", ".bz2", ".xz", ".woff", ".woff2", ".ttf", ".otf",
+                   ".mp3", ".mp4", ".mov", ".wav", ".so", ".dylib", ".bin", ".sqlite"}
 
 
 def scan(folder: Path):
@@ -50,19 +65,32 @@ def scan(folder: Path):
     if not (folder / "SKILL.md").is_file():
         blockers.append((str(folder), 0, "no SKILL.md, this is not a skill"))
 
-    for path in sorted(folder.rglob("*")):
+    try:
+        entries = sorted(folder.rglob("*"))
+    except OSError as exc:
+        return [(str(folder), 0, f"could not traverse: {exc}")], []
+
+    for path in entries:
         if any(part in JUNK for part in path.parts):
             warnings.append((path.name, 0, "development junk, remove before publishing"))
             continue
-        if not path.is_file() or path.suffix.lower() not in TEXT_SUFFIXES:
+        if not path.is_file():
+            continue
+
+        rel = path.relative_to(folder)
+        if path.name in FORBIDDEN_NAMES or path.suffix.lower() in FORBIDDEN_SUFFIXES:
+            blockers.append((rel, 0, "credential file, must never be published"))
+            continue
+        if path.is_symlink():
+            warnings.append((rel, 0, "symlink, verify the target ships with the skill"))
+        if path.suffix.lower() in BINARY_SUFFIXES:
             continue
         try:
             lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
         except OSError as exc:
-            warnings.append((str(path), 0, f"unreadable: {exc}"))
+            warnings.append((str(rel), 0, f"unreadable: {exc}"))
             continue
 
-        rel = path.relative_to(folder)
         for n, line in enumerate(lines, 1):
             for pattern, label in SECRETS:
                 if re.search(pattern, line):
@@ -74,12 +102,14 @@ def scan(folder: Path):
                 if re.search(pattern, line):
                     blockers.append((rel, n, f"{label}: breaks once the plugin is cached"))
 
-    text = (folder / "SKILL.md").read_text(encoding="utf-8", errors="replace") \
-        if (folder / "SKILL.md").is_file() else ""
-    if "efinition of done" not in text:
-        blockers.append(("SKILL.md", 0, "no 'Definition of done' section: no eval, no merge"))
-    if not re.search(r"(?i)privilege level", text):
-        warnings.append(("SKILL.md", 0, "no privilege level declared (read-only / draft-only / can-send)"))
+    skill_md = folder / "SKILL.md"
+    if skill_md.is_file():
+        text = skill_md.read_text(encoding="utf-8", errors="replace")
+        if "efinition of done" not in text:
+            blockers.append(("SKILL.md", 0, "no 'Definition of done' section: no eval, no merge"))
+        if not re.search(r"(?i)privilege level", text):
+            warnings.append(("SKILL.md", 0,
+                             "no privilege level declared (read-only / draft-only / can-send)"))
 
     return blockers, warnings
 
