@@ -63,6 +63,21 @@ PATHS = [
 # Escapes the skill folder. Breaks once the plugin is cached.
 ESCAPES = [(r"\.\./", "relative path escaping the skill folder")]
 
+# Portable by construction: these LOOK machine-specific to PATHS/DANGEROUS but
+# resolve identically on every machine that runs Claude Code, so matching them is
+# always a false positive. Kept as one list because they are one shape, not two
+# incidents: a standard interpreter declaration, and the tool's own config tree.
+# Without this, safety-check BLOCKs any skill shipping a Python script (the
+# `#!/usr/bin/env python3` shebang hits the /usr rule) or documenting where
+# transcripts live. Found 2026-08-17 running this against the objection-gate-pack:
+# 4 BLOCKs, 4 false positives, 0 real findings. The dojo's own plugin is
+# SKILL.md-only, which is why the 13 Aug test came back clean.
+PORTABLE = [
+    r"^#!/(usr/bin|bin)/",            # shebang, only ever line 1
+    r"(?<![\w.])~/\.claude(/|\b)",    # Claude Code's config tree
+    r"(?<![\w.])~/\.config(/|\b)",    # XDG config, same reasoning
+]
+
 JUNK = {".DS_Store", "__pycache__", ".git", "node_modules", ".venv", "venv",
         ".pytest_cache"}
 
@@ -113,17 +128,24 @@ def scan(folder: Path):
             continue
 
         for n, line in enumerate(lines, 1):
+            # Blank out the portable references, then run the machine-specificity
+            # rules on what is left. Blanking rather than skipping the whole line
+            # keeps a real finding that shares a line with a portable one.
+            scrubbed = line
+            for pattern in PORTABLE:
+                scrubbed = re.sub(pattern, "", scrubbed)
+
             for pattern, label in SECRETS:
                 if re.search(pattern, line):
                     blockers.append((rel, n, f"{label}: never publish this, rotate it if it was real"))
             for pattern, label in PATHS:
-                if re.search(pattern, line):
+                if re.search(pattern, scrubbed):
                     blockers.append((rel, n, f"{label}: only exists on your machine"))
             for pattern, label in ESCAPES:
                 if re.search(pattern, line):
                     blockers.append((rel, n, f"{label}: breaks once the plugin is cached"))
             for pattern, label in DANGEROUS:
-                if re.search(pattern, line):
+                if re.search(pattern, scrubbed):
                     blockers.append((rel, n, f"{label}: dangerous or too machine-specific to publish"))
 
     skill_md = folder / "SKILL.md"
