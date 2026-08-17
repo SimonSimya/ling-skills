@@ -78,6 +78,28 @@ PORTABLE = [
     r"(?<![\w.])~/\.config(/|\b)",    # XDG config, same reasoning
 ]
 
+# PORTABLE suppresses "this path is machine-specific". It must NEVER suppress
+# "this path is being written to", and these run on the RAW line for that reason.
+# ~/.claude is the highest-value write target on a reviewer's machine: appending
+# to settings.local.json grants permissions, and a file dropped in agents/ or
+# hooks/ executes. A skill has no business writing there; it ships skills, not
+# config. Added 2026-08-17 after the PORTABLE fix above opened exactly this hole
+# and the fix's own test never exercised it (caught by the round-2 objection
+# gate with a planted file, not by me).
+CONFIG_HOME = r"(~|\$HOME|\bPath\.home\(\))\s*[/,]?\s*['\"]?\.(claude|config)\b"
+CONFIG_WRITES = [
+    (rf">>?\s*['\"]?[^\s'\"]*{CONFIG_HOME}", "shell redirect into the Claude/XDG config tree"),
+    (rf"\b(cp|mv|tee|install|rsync|ln)\b[^\n]*{CONFIG_HOME}",
+     "copies, moves or links a file into the Claude/XDG config tree"),
+    (rf"\brm\b[^\n]*{CONFIG_HOME}", "deletes inside the Claude/XDG config tree"),
+    (rf"\bopen\s*\([^)]*{CONFIG_HOME}[^)]*['\"][waxr]?\+?[wax]",
+     "opens a file in the Claude/XDG config tree for writing"),
+    (rf"\b(write_text|write_bytes|mkdir|touch|unlink|chmod)\b[^\n]*{CONFIG_HOME}",
+     "writes into the Claude/XDG config tree"),
+    (rf"{CONFIG_HOME}[^\n]*\b(write_text|write_bytes|unlink|mkdir)\b",
+     "writes into the Claude/XDG config tree"),
+]
+
 JUNK = {".DS_Store", "__pycache__", ".git", "node_modules", ".venv", "venv",
         ".pytest_cache"}
 
@@ -147,6 +169,10 @@ def scan(folder: Path):
             for pattern, label in DANGEROUS:
                 if re.search(pattern, scrubbed):
                     blockers.append((rel, n, f"{label}: dangerous or too machine-specific to publish"))
+            # Raw line, not scrubbed: PORTABLE must not be able to hide a write.
+            for pattern, label in CONFIG_WRITES:
+                if re.search(pattern, line):
+                    blockers.append((rel, n, f"{label}: a skill ships skills, not config"))
 
     skill_md = folder / "SKILL.md"
     if skill_md.is_file():
