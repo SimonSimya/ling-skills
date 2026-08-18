@@ -13,7 +13,7 @@
       "displayName": "User feedback categorizer",
       "source": "./plugins/feedback-tools",
       "description": "Turn a batch of raw user feedback into a frequency-weighted, prioritized list of themes with owners.",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "author": {
         "name": "Simon Bacher"
       }
