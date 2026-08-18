@@ -8,14 +8,13 @@ makes it better, everyone gets the better version instead of it dying on one lap
 
 ## Install it (once, about 30 seconds)
 
-> **Not on GitHub yet.** Until it is, add it from a local clone. Once the repo is pushed, replace
-> the path below with `<org>/ling-skills` and everything else stays the same.
-
-In Claude Code, from the directory holding this folder:
+The repo is private, so you need read access first. Ask Simon, then in Claude Code:
 
 ```
-/plugin marketplace add ./ling-skills
+/plugin marketplace add SimonSimya/ling-skills
 ```
+
+(If you have a local clone instead, `/plugin marketplace add ./ling-skills` works the same way.)
 
 Then install what you want:
 
