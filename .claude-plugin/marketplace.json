@@ -10,6 +10,7 @@
   "plugins": [
     {
       "name": "feedback-tools",
+      "displayName": "User feedback categorizer",
       "source": "./plugins/feedback-tools",
       "description": "Turn a batch of raw user feedback into a frequency-weighted, prioritized list of themes with owners.",
       "version": "1.0.0",
