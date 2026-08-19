@@ -11,6 +11,8 @@ on:
     branches: [main]
 
 jobs:
+  # Job id is the status-check context name used by branch protection.
+  # Renaming it silently detaches the required check. Don't.
   scan:
     runs-on: ubuntu-latest
     steps:
@@ -28,14 +30,19 @@ jobs:
 
       - name: Scan every skill in the marketplace
         run: |
+          # NOT `set -e`. Actions runs run: steps as `bash -e {0}`, so a bare
+          # failing command aborts the step before `rc=$?` is ever reached: the
+          # loop would stop at the first bad skill and the ::error annotation,
+          # the thing a non-engineer actually reads, would never print. `|| rc=$?`
+          # is what keeps the loop alive.
           set -uo pipefail
           status=0
           found=0
           while IFS= read -r skill; do
             found=$((found + 1))
             echo "::group::$skill"
-            python3 scripts/safety-check.py "$skill"
-            rc=$?
+            rc=0
+            python3 scripts/safety-check.py "$skill" || rc=$?
             echo "::endgroup::"
             if [ "$rc" -eq 2 ]; then
               echo "::error file=$skill::LEAK - secret, credential or internal id. Rotate it if it was real."
@@ -45,6 +52,14 @@ jobs:
               status=1
             fi
           done < <(find plugins -type d -name skills -exec find {} -mindepth 1 -maxdepth 1 -type d \;)
+
+          # The manifests are edited in the same PR as the skill, so scanning only
+          # skills/ leaves the file most likely to hold an id unscanned.
+          echo "::group::manifests"
+          mrc=0
+          python3 scripts/safety-check.py .claude-plugin || mrc=$?
+          echo "::endgroup::"
+          [ "$mrc" -eq 2 ] && status=2
 
           if [ "$found" -eq 0 ]; then
             echo "::error::no skills found to scan - the discovery glob is wrong, failing rather than passing empty"

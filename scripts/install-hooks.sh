@@ -1,12 +1,24 @@
 #!/usr/bin/env bash
 # Installs a pre-commit hook that runs the safety check before a commit lands.
-# CI is the backstop; this catches a key BEFORE it enters your local history,
-# where removing it means rewriting history rather than deleting a line.
+# CI is the real enforcement. This is a convenience that catches a key BEFORE it
+# enters your local history, where removing it means rewriting history rather than
+# deleting a line. Note it scans your files as they are ON DISK, not what is
+# staged, so a partial `git add` is not what it inspected.
 #
 #   ./scripts/install-hooks.sh
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOOK="$ROOT/.git/hooks/pre-commit"
+
+if [ -n "$(git -C "$ROOT" config --get core.hooksPath || true)" ]; then
+  echo "core.hooksPath is set; this repo's .git/hooks is ignored. Install there instead." >&2
+  exit 1
+fi
+if [ -e "$HOOK" ] && ! grep -q "install-hooks.sh" "$HOOK"; then
+  echo "A pre-commit hook already exists and was not written by this script." >&2
+  echo "Merge it by hand rather than losing it: $HOOK" >&2
+  exit 1
+fi
 
 cat > "$HOOK" <<'INNER'
 #!/usr/bin/env bash

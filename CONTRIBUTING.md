@@ -19,7 +19,7 @@ it belongs here so someone else can fork it.
 3. **Make it portable.** See the checklist below. This is the step people skip and it is the reason forked skills break on other machines.
 4. **Give it a definition of done.** See "No eval, no merge" below. This is a hard gate.
 5. **Open a PR.** Add your skill under `plugins/<pack>/skills/<name>/`, add or update the entry in `.claude-plugin/marketplace.json`, and describe in the PR what the skill does and what you used it for.
-6. **CI runs the safety check on your PR automatically.** A LEAK fails the build and the PR cannot merge. You do not have to remember to run it, and neither does your reviewer. Run `./scripts/install-hooks.sh` once and it also runs before every local commit, which is better: a key caught pre-commit is deleted, a key caught in CI is already in your branch history and has to be rotated.
+6. **CI runs the safety check on your PR automatically.** A LEAK fails the build. You do not have to remember to run it, and neither does your reviewer. Run `./scripts/install-hooks.sh` once and it also runs before every local commit, which is better: a key caught pre-commit is deleted, a key caught in CI is already in your branch history and has to be rotated.
 7. **One reviewer approves**, then merge. Everyone who has added the marketplace gets it on their next `/plugin marketplace update`.
 
 ## Portability checklist
