@@ -11,7 +11,7 @@ makes it better, everyone gets the better version instead of it dying on one lap
 Public repo, so no account or access grant needed. In Claude Code:
 
 ```
-/plugin marketplace add SimonSimya/ling-skills
+/plugin marketplace add ling-app/ling-skills
 ```
 
 (If you have a local clone instead, `/plugin marketplace add ./ling-skills` works the same way.)
