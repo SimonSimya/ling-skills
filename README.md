@@ -42,7 +42,18 @@ pre-filling it.
 
 ## Add yours
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md). The short version:
+The easy way: open Claude Code in the workspace where your skill lives and paste
+
+```
+Publish my <skill name> skill to the ling-skills marketplace: clone
+https://github.com/ling-app/ling-skills and follow the "Publishing checklist
+(for Claude)" in CONTRIBUTING.md.
+```
+
+Claude does the copying, the portability cleanup, the safety check and the PR; you confirm what it
+wrote and get one approval.
+
+Doing it by hand instead: read [CONTRIBUTING.md](CONTRIBUTING.md). The short version:
 
 1. Build it in your own workspace and actually use it.
 2. `python3 scripts/safety-check.py <your-skill-folder>` and fix what it flags.
