@@ -8,7 +8,7 @@ makes it better, everyone gets the better version instead of it dying on one lap
 
 ## Install it (once, about 30 seconds)
 
-The repo is private, so you need read access first. Ask Simon, then in Claude Code:
+Public repo, so no account or access grant needed. In Claude Code:
 
 ```
 /plugin marketplace add SimonSimya/ling-skills

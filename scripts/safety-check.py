@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Scan a skill folder before it enters the Ling dojo.
 
-Usage: python3 scripts/safety-check.py <path-to-skill-folder> [...]
+Usage: python3 scripts/safety-check.py <skill-folder-or-submission.zip> [...]
 
 Exit 0 = clean. Exit 1 = blockers found. Warnings never fail the build.
 Four categories, matching the AH course's safety review: secrets, personal/
@@ -11,7 +11,10 @@ scripts (destructive commands, credential-store reads, exfiltration).
 """
 
 import re
+import shutil
 import sys
+import tempfile
+import zipfile
 from pathlib import Path
 
 # Dangerous or too-machine-specific behavior, the 4th category in the lesson's
@@ -100,6 +103,77 @@ CONFIG_WRITES = [
      "writes into the Claude/XDG config tree"),
 ]
 
+# ---------------------------------------------------------------------------
+# Contributed-submission categories. Added 2026-08-18, when the first four real
+# submissions arrived in Slack from people who are not engineers. The original
+# four categories answer "will this break or bite the installer". These answer
+# "does this leak Ling", which is a different question and the one Simon asked.
+# ---------------------------------------------------------------------------
+
+# Vendor credentials the original SECRETS list did not cover. Every one of these
+# is live-money or live-data on a Ling account.
+VENDOR_SECRETS = [
+    (r"\b(sk|rk)_live_[A-Za-z0-9]{10,}", "Stripe LIVE secret key"),
+    (r"\bwhsec_[A-Za-z0-9]{10,}", "Stripe webhook signing secret"),
+    (r"\bpk_live_[A-Za-z0-9]{10,}", "Stripe live publishable key"),
+    (r'"type"\s*:\s*"service_account"', "GCP/Firebase service-account JSON"),
+    (r"\bSG\.[A-Za-z0-9_\-]{20,}\.[A-Za-z0-9_\-]{20,}", "SendGrid API key"),
+    (r"\bSK[0-9a-fA-F]{32}\b", "Twilio API key"),
+    (r"\bAC[0-9a-fA-F]{32}\b", "Twilio account SID"),
+    (r"\bkey-[0-9a-zA-Z]{32}\b", "Mailgun API key"),
+    (r"\bpat-(na|eu)\d-[0-9a-fA-F\-]{20,}", "HubSpot private-app token"),
+    (r"\beyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}", "JWT"),
+    (r"(?i)\bamplitude[^\n]{0,30}\b(api[_-]?key|secret)\b[^\n]{0,10}[:=]\s*\S{8,}",
+     "Amplitude API credential"),
+    (r"(?i)\bmongodb(\+srv)?://[^\s:@]+:[^\s@]+@", "MongoDB connection string with password"),
+    (r"(?i)\b(postgres(ql)?|mysql|redis)://[^\s:@]+:[^\s@]+@",
+     "database connection string with password"),
+]
+
+# Internal identifiers. Not secret in the cryptographic sense, but they name
+# Ling's actual accounts, dashboards and documents, and a public repo hands an
+# outsider the map. These are blockers because the skill should read them from
+# config or ask the user, which the portability checklist already requires.
+INTERNAL_IDS = [
+    (r"\bacct_[A-Za-z0-9]{10,}", "Stripe account id"),
+    (r"\bcus_[A-Za-z0-9]{10,}", "Stripe customer id"),
+    (r"\b(sub|in|pi|ch)_[A-Za-z0-9]{14,}", "Stripe object id"),
+    (r"https?://docs\.google\.com/[a-z]+/d/[A-Za-z0-9_\-]{25,}", "Google Doc/Sheet URL with file id"),
+    (r"https?://drive\.google\.com/drive/folders/[A-Za-z0-9_\-]{25,}", "Google Drive folder id"),
+    (r"(?i)\b(spreadsheet|sheet|folder|document|file)[_-]?id\b\s*[:=]\s*['\"]?[A-Za-z0-9_\-]{25,}",
+     "hardcoded Google file id"),
+    (r"\bhttps?://[a-z0-9-]+\.slack\.com/archives/[CGD][A-Z0-9]{8,}", "Slack channel permalink"),
+    (r"(?i)\bchannel[_-]?id\b\s*[:=]\s*['\"]?[CGD][A-Z0-9]{8,}", "hardcoded Slack channel id"),
+    (r"(?i)\b(list|space|folder|team)[_-]?id\b\s*[:=]\s*['\"]?\d{7,}", "hardcoded ClickUp id"),
+    (r"(?i)\bproperties/\d{9,}", "GA4 property id"),
+    (r"(?i)\bprojectId\b\s*[:=]\s*['\"][a-z0-9-]{6,}['\"]", "hardcoded Firebase/GCP project id"),
+]
+
+# Customer and colleague data. A skill is a process; it should never carry the
+# rows it was tested on. Warnings, not blockers, because a role address in an
+# owner field is legitimate and only a human can tell the difference.
+PII = [
+    (r"[A-Za-z0-9._%%+\-]+@(?!ling-app\.com|simyasolutions\.com|example\.(com|org))"
+     r"[A-Za-z0-9.\-]+\.[A-Za-z]{2,}", "external email address, possibly a real user"),
+    (r"(?<!\d)\+?\d{1,3}[\s.\-]?\(?\d{2,4}\)?[\s.\-]?\d{3,4}[\s.\-]?\d{3,4}(?!\d)",
+     "possible phone number"),
+    (r"\b\d{4}[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{4}\b", "possible payment card number"),
+]
+
+# Business-confidential content. No regex decides this; it flags passages a human
+# must read before the repo goes public. Ling's revenue, roadmap and salary data
+# are the things that actually hurt, and none of them look like a credential.
+BUSINESS = [
+    (r"(?i)\b(ARR|MRR|revenue|churn rate|LTV|CAC|runway|burn rate)\b[^\n]{0,40}"
+     r"[\$€£]\s?[\d,.]+|[\$€£]\s?[\d,.]+[^\n]{0,20}\b(ARR|MRR|revenue)\b",
+     "revenue or growth figure"),
+    (r"(?i)\b(salary|salaries|compensation|payroll|equity grant|option grant)\b",
+     "compensation reference"),
+    (r"(?i)\b(acquisition|term sheet|due diligence|cap table|valuation|fundrais\w+)\b",
+     "corporate-finance reference"),
+    (r"(?i)\b(confidential|internal only|do not share|nda)\b", "explicitly marked confidential"),
+]
+
 JUNK = {".DS_Store", "__pycache__", ".git", "node_modules", ".venv", "venv",
         ".pytest_cache"}
 
@@ -173,6 +247,18 @@ def scan(folder: Path):
             for pattern, label in CONFIG_WRITES:
                 if re.search(pattern, line):
                     blockers.append((rel, n, f"{label}: a skill ships skills, not config"))
+            for pattern, label in VENDOR_SECRETS:
+                if re.search(pattern, line):
+                    blockers.append((rel, n, f"{label}: never publish this, ROTATE IT NOW"))
+            for pattern, label in INTERNAL_IDS:
+                if re.search(pattern, line):
+                    blockers.append((rel, n, f"{label}: read it from config or ask the user"))
+            for pattern, label in PII:
+                if re.search(pattern, line):
+                    warnings.append((rel, n, f"{label}: a skill is a process, not the rows it was tested on"))
+            for pattern, label in BUSINESS:
+                if re.search(pattern, line):
+                    warnings.append((rel, n, f"{label}: a human must read this before the repo is public"))
 
     skill_md = folder / "SKILL.md"
     if skill_md.is_file():
@@ -193,9 +279,41 @@ def main():
         return 2
 
     failed = False
-    for folder in targets:
+    for target in targets:
+        # Submissions arrive as zips from Slack, so accept one directly rather
+        # than making the reviewer unpack it by hand. An unpack step a human has
+        # to remember is a step that gets skipped on a busy day.
+        tmp = None
+        folder = target
+        if target.is_file() and target.suffix.lower() == ".zip":
+            tmp = Path(tempfile.mkdtemp(prefix="safety-check-"))
+            try:
+                with zipfile.ZipFile(target) as z:
+                    for member in z.namelist():
+                        # Refuse path traversal rather than trusting the archive.
+                        dest = (tmp / member).resolve()
+                        if not str(dest).startswith(str(tmp.resolve())):
+                            print(f"\n=== {target.name} ===")
+                            print(f"  BLOCK  {member}: zip entry escapes the archive root")
+                            failed = True
+                            z = None
+                            break
+                    if z is not None:
+                        z.extractall(tmp)
+            except zipfile.BadZipFile as exc:
+                print(f"\n=== {target.name} ===")
+                print(f"  BLOCK  {target.name}: not a readable zip: {exc}")
+                shutil.rmtree(tmp, ignore_errors=True)
+                failed = True
+                continue
+            # A zip usually wraps everything in one top-level directory.
+            kids = [c for c in tmp.iterdir() if c.name != "__MACOSX"]
+            folder = kids[0] if len(kids) == 1 and kids[0].is_dir() else tmp
+
         blockers, warnings = scan(folder)
-        print(f"\n=== {folder.name} ===")
+        if tmp:
+            shutil.rmtree(tmp, ignore_errors=True)
+        print(f"\n=== {target.name} ===")
         for where, line, msg in blockers:
             loc = f"{where}:{line}" if line else str(where)
             print(f"  BLOCK  {loc}: {msg}")

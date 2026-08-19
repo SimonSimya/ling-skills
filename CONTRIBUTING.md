@@ -7,7 +7,13 @@ it belongs here so someone else can fork it.
 ## The loop
 
 1. **Build it in your own workspace** (`.claude/skills/<name>/SKILL.md`). Get it working on real work first. A skill you have not actually used is not ready.
-2. **Run the safety check.** `python3 scripts/safety-check.py <path-to-your-skill-folder>`. It fails the build on hardcoded secrets, personal file paths, and references to files outside the skill folder. Fix what it flags. Do not "publish now and clean later"; that is how keys leak.
+2. **Run the safety check.** `python3 scripts/safety-check.py <your-skill-folder-or-submission.zip>`. Fix everything it flags. Do not "publish now and clean later"; that is how keys leak.
+
+   It blocks on two kinds of thing. **Things that break the installer:** personal file paths, references escaping the skill folder, destructive commands, anything writing into `~/.claude`. **Things that leak Ling:** vendor keys (Stripe, GCP/Firebase service accounts, SendGrid, Twilio, HubSpot, database URLs), and internal identifiers such as Stripe account ids, Google Sheet and Drive file ids, Slack channel ids, ClickUp list ids, GA4 property ids and Firebase project ids. An id is not a password, but a public repo hands an outsider the map, so read ids from config or ask the user for them.
+
+   It also **warns**, without failing, on things only a person can judge: external email addresses and phone numbers (a skill is a process, not the rows it was tested on), revenue and compensation figures, and anything marked confidential. Read every warning before you merge.
+
+   **The check is a floor, not a clearance.** It matches patterns; it cannot recognise a customer name, an unreleased roadmap or a screenshot. `git log -p` your own diff before opening the PR, and remember the repo is public.
 3. **Make it portable.** See the checklist below. This is the step people skip and it is the reason forked skills break on other machines.
 4. **Give it a definition of done.** See "No eval, no merge" below. This is a hard gate.
 5. **Open a PR.** Add your skill under `plugins/<pack>/skills/<name>/`, add or update the entry in `.claude-plugin/marketplace.json`, and describe in the PR what the skill does and what you used it for.
