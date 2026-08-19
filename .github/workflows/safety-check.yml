@@ -1,0 +1,54 @@
+name: safety-check
+
+# The scanner was documented in CONTRIBUTING and enforced by nothing: no CI, no
+# hooks, no branch protection. Anyone could open a PR with a live key and the only
+# thing standing in the way was a reviewer remembering to run a script by hand.
+# This makes it mechanical. A rule without a mechanism decays.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Regression suite
+        # Runs first. If the scanner itself is broken, its verdict on a submission
+        # is worthless, and a scanner that silently stops catching things is the
+        # exact failure this repo already had once.
+        run: python3 tests/run.py
+
+      - name: Scan every skill in the marketplace
+        run: |
+          set -uo pipefail
+          status=0
+          found=0
+          while IFS= read -r skill; do
+            found=$((found + 1))
+            echo "::group::$skill"
+            python3 scripts/safety-check.py "$skill"
+            rc=$?
+            echo "::endgroup::"
+            if [ "$rc" -eq 2 ]; then
+              echo "::error file=$skill::LEAK - secret, credential or internal id. Rotate it if it was real."
+              status=2
+            elif [ "$rc" -eq 1 ] && [ "$status" -ne 2 ]; then
+              echo "::error file=$skill::GAP - missing SKILL.md or definition of done."
+              status=1
+            fi
+          done < <(find plugins -type d -name skills -exec find {} -mindepth 1 -maxdepth 1 -type d \;)
+
+          if [ "$found" -eq 0 ]; then
+            echo "::error::no skills found to scan - the discovery glob is wrong, failing rather than passing empty"
+            exit 1
+          fi
+          echo "scanned $found skill(s)"
+          exit $status
