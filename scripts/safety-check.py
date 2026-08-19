@@ -3,7 +3,9 @@
 
 Usage: python3 scripts/safety-check.py <skill-folder-or-submission.zip> [...]
 
-Exit 0 = clean. Exit 1 = blockers found. Warnings never fail the build.
+Exit 0 = clean. Exit 2 = LEAK (secret, credential or internal id: stop).
+Exit 1 = GAP (missing SKILL.md or definition of done). `read` lines never fail
+the build; they mark passages a human must read before merging.
 Four categories, matching the AH course's safety review: secrets, personal/
 machine-specific paths, references escaping the skill folder (breaks on
 install, plugins are copied to a cache), and dangerous or too-machine-specific
@@ -39,7 +41,14 @@ DANGEROUS = [
 
 SECRETS = [
     (r"AIza[0-9A-Za-z_\-]{30,}", "Google API key"),
-    (r"sk-[A-Za-z0-9]{20,}", "OpenAI-style secret key"),
+    (r"sk-[A-Za-z0-9_\-]{20,}", "OpenAI-style secret key"),
+    (r"\bsk-proj-[A-Za-z0-9_\-]{20,}", "OpenAI project key"),
+    (r"\bxapp-\d-[A-Za-z0-9\-]{10,}", "Slack app-level token"),
+    (r"https?://hooks\.slack\.com/services/T[A-Z0-9]+/B[A-Z0-9]+/\S+",
+     "Slack incoming-webhook URL (a live send credential)"),
+    (r"\bGOCSPX-[A-Za-z0-9_\-]{10,}", "Google OAuth client secret"),
+    (r"https?://[a-z0-9]+@[a-z0-9.\-]*sentry\.io/\d+", "Sentry DSN"),
+    (r"\b(sk|rk|pk)_test_[A-Za-z0-9]{10,}", "Stripe test key (still a credential)"),
     (r"sk-ant-[A-Za-z0-9\-_]{20,}", "Anthropic API key"),
     (r"ghp_[A-Za-z0-9]{20,}", "GitHub classic token"),
     (r"github_pat_[A-Za-z0-9_]{20,}", "GitHub fine-grained token"),
@@ -50,8 +59,13 @@ SECRETS = [
     (r"AKIA[0-9A-Z]{16}", "AWS access key id"),
     (r"-----BEGIN [A-Z ]*PRIVATE KEY-----", "private key material"),
     (r"Bearer\s+[A-Za-z0-9._\-]{20,}", "hardcoded bearer token"),
-    # Quoted or bare. Bare form is how .env and YAML actually leak.
-    (r"(?i)\b(api[_-]?key|secret|password|passwd|token|client[_-]?secret)\b\s*[:=]\s*"
+    (r"(?i)\b_auth(Token)?\s*=\s*\S{12,}", "npm/registry basic-auth credential"),
+    # `\b` after a `_` never matches, because `_` is a word character, so the old
+    # form of this rule missed DB_PASSWORD=, SLACK_BOT_TOKEN=, OPENAI_API_KEY= —
+    # i.e. every real .env line, which is the commonest leak shape there is.
+    # Measured 2026-08-18: 0 blockers on a file of four such lines.
+    (r"(?i)(?:^|[^A-Za-z0-9])[A-Za-z0-9]*[_-]?"
+     r"(api[_-]?key|secret|password|passwd|token|client[_-]?secret|credential)s?\s*[:=]\s*"
      r"[\"']?[^\s\"'{$<>][^\s\"']{7,}", "hardcoded credential"),
 ]
 
@@ -140,21 +154,32 @@ INTERNAL_IDS = [
     (r"\b(sub|in|pi|ch)_[A-Za-z0-9]{14,}", "Stripe object id"),
     (r"https?://docs\.google\.com/[a-z]+/d/[A-Za-z0-9_\-]{25,}", "Google Doc/Sheet URL with file id"),
     (r"https?://drive\.google\.com/drive/folders/[A-Za-z0-9_\-]{25,}", "Google Drive folder id"),
+    (r"https?://drive\.google\.com/file/d/[A-Za-z0-9_\-]{25,}", "Google Drive file id"),
     (r"(?i)\b(spreadsheet|sheet|folder|document|file)[_-]?id\b\s*[:=]\s*['\"]?[A-Za-z0-9_\-]{25,}",
      "hardcoded Google file id"),
     (r"\bhttps?://[a-z0-9-]+\.slack\.com/archives/[CGD][A-Z0-9]{8,}", "Slack channel permalink"),
     (r"(?i)\bchannel[_-]?id\b\s*[:=]\s*['\"]?[CGD][A-Z0-9]{8,}", "hardcoded Slack channel id"),
     (r"(?i)\b(list|space|folder|team)[_-]?id\b\s*[:=]\s*['\"]?\d{7,}", "hardcoded ClickUp id"),
     (r"(?i)\bproperties/\d{9,}", "GA4 property id"),
-    (r"(?i)\bprojectId\b\s*[:=]\s*['\"][a-z0-9-]{6,}['\"]", "hardcoded Firebase/GCP project id"),
+    (r"(?i)\bproject[_-]?id\b\s*[:=]\s*['\"]?[a-z0-9-]{6,}", "hardcoded Firebase/GCP project id"),
+    (r"(?i)\baws[^\n]{0,20}\baccount\b[^\n]{0,15}\b\d{12}\b", "AWS account id"),
+    (r"https?://app\.clickup\.com/\S+", "ClickUp URL"),
+    (r"https?://(www\.)?notion\.so/\S*[0-9a-f]{32}", "Notion page id"),
+    # A bare Google file id assigned to something. 33+ chars of id alphabet in a
+    # quoted assignment is not a word, it is an identifier for one of our documents.
+    (r"[:=]\s*['\"][A-Za-z0-9_\-]{33,}['\"]", "bare file/document id in an assignment"),
 ]
 
 # Customer and colleague data. A skill is a process; it should never carry the
 # rows it was tested on. Warnings, not blockers, because a role address in an
 # owner field is legitimate and only a human can tell the difference.
 PII = [
-    (r"[A-Za-z0-9._%%+\-]+@(?!ling-app\.com|simyasolutions\.com|example\.(com|org))"
-     r"[A-Za-z0-9.\-]+\.[A-Za-z]{2,}", "external email address, possibly a real user"),
+    # Only role addresses are exempt. Exempting the whole company domain was
+    # written for a private repo; on a public one an employee roster is a
+    # spearphishing list, so a named colleague must warn like anyone else.
+    (r"(?i)(?!(?:support|hello|info|team|contact|noreply|no-reply|all)@)"
+     r"[A-Za-z0-9._%%+\-]+@(?!example\.(com|org|net)|test\.com)"
+     r"[A-Za-z0-9.\-]+\.[A-Za-z]{2,}", "email address, possibly a real person"),
     (r"(?<!\d)\+?\d{1,3}[\s.\-]?\(?\d{2,4}\)?[\s.\-]?\d{3,4}[\s.\-]?\d{3,4}(?!\d)",
      "possible phone number"),
     (r"\b\d{4}[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{4}\b", "possible payment card number"),
@@ -174,6 +199,27 @@ BUSINESS = [
     (r"(?i)\b(confidential|internal only|do not share|nda)\b", "explicitly marked confidential"),
 ]
 
+# The scanner must never block the fix it recommends. CONTRIBUTING says "read them
+# from the environment or ask the user", and `api_key = os.environ["OPENAI_API_KEY"]`
+# is that instruction followed exactly, yet it matched the hardcoded-credential rule.
+# Nine non-engineers would have hit this on their first run. A line whose VALUE is a
+# lookup is exempt from the credential rule only; every other rule still sees it.
+# Obvious non-secrets. Instructional prose and worked examples are what a SKILL.md
+# is MADE of, so a rule that fires on "replace-with-your-token" or on a sha256
+# digest trains people to ignore every finding, including the real one.
+PLACEHOLDER = re.compile(
+    r"(?i)(replace[_-]?(with|me)|your[_-]?(own|api|key|token)|<[^>]{3,}>|\bxxx+\b|"
+    r"\bexample\b|\bdummy\b|\bplaceholder\b|\bfake\b|\bTODO\b|\bchangeme\b|"
+    r"correct-horse|\bsample\b|\bredacted\b|\*{4,})")
+
+# A 64-char hex run is a digest, not one of our document ids.
+HEXISH = re.compile(r"['\"][0-9a-f]{32,}['\"]", re.I)
+
+ENV_READ = re.compile(
+    r"[:=]\s*\(?\s*(os\.environ|os\.getenv|process\.env|ENV\[|Deno\.env|"
+    r"config\.get|settings\.|getenv\(|\$\{?[A-Za-z_])",
+    re.I)
+
 JUNK = {".DS_Store", "__pycache__", ".git", "node_modules", ".venv", "venv",
         ".pytest_cache"}
 
@@ -183,24 +229,26 @@ FORBIDDEN_SUFFIXES = {".pem", ".p12", ".pfx", ".key", ".keystore"}
 
 # Scan everything except known-binary formats. An allowlist silently skips
 # whatever file type nobody thought of, which is where secrets hide.
+ARCHIVE_SUFFIXES = {".zip", ".gz", ".tgz", ".bz2", ".xz", ".7z", ".rar", ".tar"}
+
 BINARY_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".pdf", ".zip",
                    ".gz", ".tgz", ".bz2", ".xz", ".woff", ".woff2", ".ttf", ".otf",
                    ".mp3", ".mp4", ".mov", ".wav", ".so", ".dylib", ".bin", ".sqlite"}
 
 
 def scan(folder: Path):
-    blockers, warnings = [], []
+    blockers, quality, warnings = [], [], []
 
     if not folder.is_dir():
-        return [(str(folder), 0, "path is not a directory")], []
+        return [], [(str(folder), 0, "path is not a directory")], []
 
     if not (folder / "SKILL.md").is_file():
-        blockers.append((str(folder), 0, "no SKILL.md, this is not a skill"))
+        quality.append((str(folder), 0, "no SKILL.md, this is not a skill"))
 
     try:
         entries = sorted(folder.rglob("*"))
     except OSError as exc:
-        return [(str(folder), 0, f"could not traverse: {exc}")], []
+        return [], [(str(folder), 0, f"could not traverse: {exc}")], []
 
     for path in entries:
         if any(part in JUNK for part in path.parts):
@@ -215,6 +263,12 @@ def scan(folder: Path):
             continue
         if path.is_symlink():
             warnings.append((rel, 0, "symlink, verify the target ships with the skill"))
+        if path.suffix.lower() in ARCHIVE_SUFFIXES:
+            # Skipping this as "binary" let a submission smuggle a live key inside
+            # an inner zip and exit 0. Unscannable content does not get a pass.
+            blockers.append((rel, 0, "archive inside a submission: unpack it and commit "
+                                     "the files, the scanner cannot see inside"))
+            continue
         if path.suffix.lower() in BINARY_SUFFIXES:
             continue
         try:
@@ -231,8 +285,14 @@ def scan(folder: Path):
             for pattern in PORTABLE:
                 scrubbed = re.sub(pattern, "", scrubbed)
 
+            reads_env = bool(ENV_READ.search(line))
+            benign = reads_env or bool(PLACEHOLDER.search(line))
             for pattern, label in SECRETS:
                 if re.search(pattern, line):
+                    # A literal key is still a key even on an env-read line, so only
+                    # the generic keyword rule is exempted, never the shaped ones.
+                    if label == "hardcoded credential" and benign:
+                        continue
                     blockers.append((rel, n, f"{label}: never publish this, rotate it if it was real"))
             for pattern, label in PATHS:
                 if re.search(pattern, scrubbed):
@@ -252,6 +312,8 @@ def scan(folder: Path):
                     blockers.append((rel, n, f"{label}: never publish this, ROTATE IT NOW"))
             for pattern, label in INTERNAL_IDS:
                 if re.search(pattern, line):
+                    if label.startswith("bare file") and (HEXISH.search(line) or benign):
+                        continue
                     blockers.append((rel, n, f"{label}: read it from config or ask the user"))
             for pattern, label in PII:
                 if re.search(pattern, line):
@@ -264,12 +326,12 @@ def scan(folder: Path):
     if skill_md.is_file():
         text = skill_md.read_text(encoding="utf-8", errors="replace")
         if "efinition of done" not in text:
-            blockers.append(("SKILL.md", 0, "no 'Definition of done' section: no eval, no merge"))
+            quality.append(("SKILL.md", 0, "no 'Definition of done' section: no eval, no merge"))
         if not re.search(r"(?i)privilege level", text):
             warnings.append(("SKILL.md", 0,
                              "no privilege level declared (read-only / draft-only / can-send)"))
 
-    return blockers, warnings
+    return blockers, quality, warnings
 
 
 def main():
@@ -278,7 +340,7 @@ def main():
         print(__doc__)
         return 2
 
-    failed = False
+    failed = leaked = False
     for target in targets:
         # Submissions arrive as zips from Slack, so accept one directly rather
         # than making the reviewer unpack it by hand. An unpack step a human has
@@ -292,7 +354,7 @@ def main():
                     for member in z.namelist():
                         # Refuse path traversal rather than trusting the archive.
                         dest = (tmp / member).resolve()
-                        if not str(dest).startswith(str(tmp.resolve())):
+                        if not dest.is_relative_to(tmp.resolve()):
                             print(f"\n=== {target.name} ===")
                             print(f"  BLOCK  {member}: zip entry escapes the archive root")
                             failed = True
@@ -310,21 +372,31 @@ def main():
             kids = [c for c in tmp.iterdir() if c.name != "__MACOSX"]
             folder = kids[0] if len(kids) == 1 and kids[0].is_dir() else tmp
 
-        blockers, warnings = scan(folder)
+        blockers, quality, warnings = scan(folder)
         if tmp:
             shutil.rmtree(tmp, ignore_errors=True)
         print(f"\n=== {target.name} ===")
         for where, line, msg in blockers:
             loc = f"{where}:{line}" if line else str(where)
-            print(f"  BLOCK  {loc}: {msg}")
+            print(f"  LEAK   {loc}: {msg}")
+        for where, line, msg in quality:
+            loc = f"{where}:{line}" if line else str(where)
+            print(f"  GAP    {loc}: {msg}")
         for where, line, msg in warnings:
             loc = f"{where}:{line}" if line else str(where)
-            print(f"  warn   {loc}: {msg}")
+            print(f"  read   {loc}: {msg}")
         if blockers:
+            leaked = True
+        if quality:
             failed = True
-        elif not warnings:
+        if not (blockers or quality or warnings):
             print("  clean")
     print()
+    # Distinct exit codes on purpose. A missing heading and a live Stripe key must
+    # never look the same to a reviewer or to CI, or overriding one teaches you to
+    # override the other.
+    if leaked:
+        return 2
     return 1 if failed else 0
 
 
