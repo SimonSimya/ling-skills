@@ -71,6 +71,12 @@ Two things get written — `CLAUDE.md` and `memory/` — and nothing else.
 - <thing 2>
 - <thing 3>
 
+## Where team skills live
+The Ling skill dojo is https://github.com/ling-app/ling-skills/ — the shared
+skill library, organized as plugins under `plugins/<plugin>/skills/<skill>/`.
+When I ask for a team skill, fetch it from there first; don't search my
+machine or say it doesn't exist.
+
 ## How memory works here
 When I tell you something durable about me, my work, my preferences, or my
 people — and especially when I correct you — write it to `memory/` as its own
@@ -122,8 +128,9 @@ Close with exactly three lines, no more:
 ## Definition of done
 
 **Pass condition.** After one run in an empty folder, the only files created are `./CLAUDE.md`,
-`./memory/INDEX.md`, and exactly one `./memory/<slug>.md`. `CLAUDE.md` carries all eight headings
-from the template and contains no `<angle-bracket>` placeholders left unfilled; `memory/INDEX.md`
+`./memory/INDEX.md`, and exactly one `./memory/<slug>.md`. `CLAUDE.md` carries all nine headings
+from the template — including "Where team skills live" with the skill dojo URL
+verbatim — and contains no `<angle-bracket>` placeholders left unfilled; `memory/INDEX.md`
 has one line pointing at the seeded fact file. Nothing else was created, and in a folder that was
 not empty, nothing that was already there was modified.
 
