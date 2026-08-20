@@ -9,8 +9,10 @@ Turn an empty folder into a working Claude memory in about two minutes. The outp
 
 ## About
 
-- **Privilege level:** draft-only. It writes two things into the folder you run it in (`CLAUDE.md`
-  and a `memory/` folder) and nothing else. No sends, no external systems, no spend.
+- **Privilege level:** draft-only — it produces files you keep, in the folder you run it in
+  (`CLAUDE.md` and a `memory/` folder) and nothing else. No sends, no external systems, no spend.
+  Note that the `CLAUDE.md` it writes then asks Claude to keep filing new facts into `memory/` as
+  you work. That is the point of it, but it means local writes continue after this skill is done.
 - **Tools needed:** none. No connectors, no API keys, no repo to clone.
 - **Where it runs:** any empty or near-empty folder you have opened in Claude Code.
 
@@ -19,10 +21,11 @@ Turn an empty folder into a working Claude memory in about two minutes. The outp
 Run one check:
 
 ```bash
-ls -a . | head -20; test -f CLAUDE.md && echo "EXISTS: CLAUDE.md"
+ls -a . | head -20; test -f CLAUDE.md && echo "EXISTS: CLAUDE.md"; ls memory/ 2>/dev/null
 ```
 
-- `CLAUDE.md` already exists → say so, and offer **refresh** (fill gaps, keep what's there) instead of overwrite. Never clobber it.
+- `CLAUDE.md` already exists → say so, and offer **refresh**: read it, and only *add* the headings and facts it is missing, leaving every existing line untouched. Never rewrite or reorder what is there.
+- `memory/` already has files → same rule. Read `INDEX.md` first, add new fact files alongside, never replace one. If a slug you were about to use is taken, append to that file instead of overwriting it.
 - The folder is already a full workspace (has `00-brain/` or `.claude/rules/`) → stop. Say this is the lean starter and that the workspace has its own setup already; if it is a WorkOS template, hand off to its `setup-workos`. This skill is for plain folders.
 
 ## The Interview
@@ -74,7 +77,7 @@ Don't ask permission, just do it and mention it in one line.
 Check `memory/` before telling me you don't know something.
 ```
 
-**`memory/`** — create the folder and seed it with the first real fact from their answers (never a placeholder or a how-to file), plus `memory/INDEX.md` with one line pointing at it:
+**`memory/`** — create the folder and seed it with the first real fact from their answers (never a placeholder or a how-to file), plus `memory/INDEX.md` with one line pointing at it. Name the file in plain ASCII kebab-case, no spaces or slashes; if that name is already taken, append to the existing file rather than replacing it:
 
 ```markdown
 ---
@@ -97,7 +100,7 @@ Then `INDEX.md`:
 Close with exactly three lines, no more:
 
 1. `CLAUDE.md` and `memory/` are written — open `CLAUDE.md` and fix anything that reads wrong.
-2. Connect one tool (Gmail or Calendar), then ask me something that needs it.
+2. Connect one tool you already use, then ask me something that needs it.
 3. When you correct me, add **"and remember that"** — that's the whole habit.
 
 ## Do Not
@@ -109,22 +112,24 @@ Close with exactly three lines, no more:
 
 ## Definition of done
 
-**Pass condition.** After one run in an empty folder, `find . -type f` returns exactly three paths:
-`CLAUDE.md`, `memory/INDEX.md`, and one `memory/<slug>.md`. `CLAUDE.md` carries all seven headings
-from the template, contains no `<angle-bracket>` placeholders left unfilled, and `memory/INDEX.md`
-has one line pointing at the seeded fact file. No other file or folder was created.
+**Pass condition.** After one run in an empty folder, the only files created are `./CLAUDE.md`,
+`./memory/INDEX.md`, and exactly one `./memory/<slug>.md`. `CLAUDE.md` carries all seven headings
+from the template and contains no `<angle-bracket>` placeholders left unfilled; `memory/INDEX.md`
+has one line pointing at the seeded fact file. Nothing else was created, and in a folder that was
+not empty, nothing that was already there was modified.
 
-**Golden example.** Answers: *"Lisa, Head of Growth at a language-learning app, based in Chiang Mai
-/ paid budget, experiment roadmap, D7 retention, growth hiring / Simon (CEO), Minh (data), Raisha
-(content), Wes (product); Amplitude, Slack, ClickUp, Sheets, Meta and Google Ads / direct, act and
-report, ask before spending / Q3 D7 at 7.1%, rebuilding paid mix, hiring a performance marketer."*
+**Golden example.** Answers: *"Head of Growth at a language-learning app / paid budget, experiment
+roadmap, retention targets, growth hiring / my CEO, a data analyst, a content lead, a product lead;
+we use an analytics tool, Slack, a task tracker and the ad managers / direct, act and report, ask
+before spending / Q3 retention target, rebuilding the paid mix, hiring a performance marketer."*
 
 Accepted output: a ~250-word `CLAUDE.md` with those five answers slotted into their sections and the
-"How memory works here" block verbatim, plus `memory/d7-retention-target.md` holding the retention
+"How memory works here" block verbatim, plus `memory/retention-target.md` holding the retention
 number as its own fact and one matching line in `memory/INDEX.md`.
 
-**Adversarial case.** Run it in a folder that already has a `CLAUDE.md`, or in a full workspace with
-a `00-brain/` or `.claude/rules/` directory. It must **write nothing**: for an existing `CLAUDE.md`
-it says so and offers to fill gaps instead; for a full workspace it says this is the lean starter and
-that the workspace already has its own setup. A run that overwrites either one is a failure, no
-matter how good the file it produced.
+**Adversarial case.** Run it in a folder that already has a `CLAUDE.md` or a populated `memory/`,
+or in a full workspace with a `00-brain/` or `.claude/rules/` directory. In a full workspace it
+writes nothing at all and says this is the lean starter, which that workspace does not need. With an
+existing `CLAUDE.md` or `memory/` it may only *add* what is missing, after saying what it found, and
+every pre-existing line must survive the run byte for byte. A run that rewrites or reorders existing
+content is a failure no matter how good the file it produced.
