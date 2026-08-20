@@ -71,3 +71,29 @@ Forking is encouraged; that is the point of the library. To customize a skill an
 upstream improvements: keep your renamed fork, install the updated original alongside it, have
 Claude read the original's changes and merge what you want into your fork, then uninstall the
 original. The changelog in each PR is what makes this possible, so write a real one.
+
+## Publishing checklist (for Claude)
+
+When a user asks you to publish their skill here, do the work yourself; hand back only the two
+things that are theirs to do (confirming content you drafted, and the PR approval). Steps:
+
+1. Clone `ling-app/ling-skills` and create a branch `add-<skill-name>`. No push access? Use
+   `gh repo fork ling-app/ling-skills --clone` and work from the fork; the PR flow is the same.
+2. Copy the user's skill folder to `plugins/<pack>/skills/<skill-name>/`. Pick an existing pack
+   that fits or create a new one; pack names are short and functional (`payments`, `growth`,
+   `support`).
+3. Edit the copy until it passes the portability checklist above: strip absolute paths, `../`
+   references, personal names, and hardcoded keys, tokens, or internal ids (Stripe accounts,
+   sheet/Drive ids, Slack channels, ClickUp lists): read those from env vars or ask at runtime.
+   This repo is public.
+4. Make sure `SKILL.md` has an `## About` section declaring a privilege level (read-only /
+   draft-only / can-send) and a `## Definition of done` per "No eval, no merge" above. If either
+   is missing, draft it from what the skill actually does and have the user confirm.
+5. Run `python3 scripts/safety-check.py plugins/<pack>/skills/<skill-name>` and fix everything it
+   flags. Never work around a LEAK; if it found a real credential, tell the user to rotate it.
+6. Add the plugin entry to `.claude-plugin/marketplace.json`, copying the shape of an existing
+   entry. Author is the user, not you.
+7. Open the PR: what the skill does, what the user used it for, its privilege level, and a real
+   changelog. A can-send skill needs a named owner in the PR body and two reviewers.
+8. Tell the user what's left for them: get one approval (two for can-send), then merge. After merge, everyone picks
+   it up with `/plugin marketplace update ling-skills`.
