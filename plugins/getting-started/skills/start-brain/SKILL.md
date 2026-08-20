@@ -32,6 +32,8 @@ ls -a . | head -20; test -f CLAUDE.md && echo "EXISTS: CLAUDE.md"; ls memory/ 2>
 
 Ask all five in **one** message, numbered, and tell them one line each is enough. Do not drip questions — the whole point is that this takes two minutes.
 
+**One-by-one mode:** if the user asks to be asked one at a time, do that instead — one question per turn, in order, labelled "Question N of 5". The other rules still hold: take each answer as given, no follow-up probing inside a question, and write the files immediately after answer five. This mode is only entered at the user's request, never by default.
+
 1. **Who are you?** Name, role, company, where you're based.
 2. **What lands on your desk?** The work you own and the decisions that are yours.
 3. **Who and what do you work with?** The 3-5 people you deal with daily, and the tools (Gmail, Slack, ClickUp, Notion, Figma...).
@@ -107,7 +109,7 @@ Close with exactly three lines, no more:
 
 - Create `projects/`, `areas/`, `notes/`, `docs/` or any other folder. One file and `memory/`. Structure gets added when a real workflow demands it, not before.
 - Copy in a template, clone a repo, or install anything.
-- Ask follow-up rounds of questions. One round, then write.
+- Ask follow-up rounds of questions. One pass through the five (in one message by default, or one per turn if the user asked for that), then write. Never probe deeper on an answer.
 - Overwrite an existing `CLAUDE.md`.
 
 ## Definition of done
