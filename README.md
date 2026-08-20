@@ -20,14 +20,14 @@ failure people actually hit: in a non-interactive or auto mode Claude reports it
 step and hands the commands back. Switch to a mode that asks permission, or run them yourself:
 
 ```
-claude plugin marketplace add ling-app/ling-skills
+claude plugin marketplace add https://github.com/ling-app/ling-skills
 claude plugin install getting-started@ling-skills --scope user
 ```
 
 `--scope user` installs it everywhere rather than in one folder.
 
 Inside an interactive Claude Code session the slash-command equivalents work too
-(`/plugin marketplace add ling-app/ling-skills`). They are not available in the Claude desktop app,
+(`/plugin marketplace add https://github.com/ling-app/ling-skills`). They are not available in the Claude desktop app,
 which answers `/plugin isn't available in this environment`.
 
 Later, to pick up everyone else's improvements:
