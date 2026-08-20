@@ -1,0 +1,16 @@
+{
+  "name": "brand-design",
+  "displayName": "Ling design system",
+  "description": "Apply Ling brand guidelines — colors, Poppins typography, mascot and illustration rules, scene templates — to any visual design or Canva output.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Simon Bacher"
+  },
+  "keywords": [
+    "design",
+    "brand",
+    "canva",
+    "social-media",
+    "illustration"
+  ]
+}
