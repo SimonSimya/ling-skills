@@ -30,9 +30,9 @@ ls -a . | head -20; test -f CLAUDE.md && echo "EXISTS: CLAUDE.md"; ls memory/ 2>
 
 ## The Interview
 
-Ask all five in **one** message, numbered, and tell them one line each is enough. Do not drip questions — the whole point is that this takes two minutes.
+Ask the five questions **one at a time** — one question per turn, in order, labelled "Question N of 5", waiting for the answer before asking the next. Tell them one line is enough. Take each answer as given: no follow-up probing inside a question, and write the files immediately after answer five.
 
-**One-by-one mode:** if the user asks to be asked one at a time, do that instead — one question per turn, in order, labelled "Question N of 5". The other rules still hold: take each answer as given, no follow-up probing inside a question, and write the files immediately after answer five. This mode is only entered at the user's request, never by default.
+**Batch mode:** if the user asks to get all the questions at once, ask all five in one numbered message and tell them one line each is enough. The other rules still hold: take each answer as given, and write the files immediately after answer five. This mode is only entered at the user's request, never by default.
 
 1. **Who are you?** Name, role, company, where you're based.
 2. **What lands on your desk?** The work you own and the decisions that are yours.
@@ -122,7 +122,7 @@ Close with exactly three lines, no more:
 
 - Create `projects/`, `areas/`, `notes/`, `docs/` or any other folder. One file and `memory/`. Structure gets added when a real workflow demands it, not before. (`.claude/skills/` is the one sanctioned later addition — created the day the first real skill lands, per the "How skills work here" block, not at setup.)
 - Copy in a template, clone a repo, or install anything.
-- Ask follow-up rounds of questions. One pass through the five (in one message by default, or one per turn if the user asked for that), then write. Never probe deeper on an answer.
+- Ask follow-up rounds of questions. One pass through the five (one per turn by default, or all in one message if the user asked for that), then write. Never probe deeper on an answer.
 - Overwrite an existing `CLAUDE.md`.
 
 ## Definition of done
