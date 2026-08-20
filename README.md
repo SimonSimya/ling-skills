@@ -8,24 +8,32 @@ makes it better, everyone gets the better version instead of it dying on one lap
 
 ## Install it (once, about 30 seconds)
 
-Public repo, so no account or access grant needed. In Claude Code:
+Public repo, so no GitHub account and no access request. **Just tell Claude Code:**
+
+> Install the plugin marketplace at https://github.com/ling-app/ling-skills and then install the
+> feedback-tools plugin from it.
+
+Then restart Claude Code, and the skill is loaded.
+
+**If it refuses**, you are in a permission mode that cannot approve the install. This is the one
+failure people actually hit: in a non-interactive or auto mode Claude reports it cannot run the
+step and hands the commands back. Switch to a mode that asks permission, or run them yourself:
 
 ```
-/plugin marketplace add ling-app/ling-skills
+claude plugin marketplace add ling-app/ling-skills
+claude plugin install feedback-tools@ling-skills --scope user
 ```
 
-(If you have a local clone instead, `/plugin marketplace add ./ling-skills` works the same way.)
+`--scope user` installs it everywhere rather than in one folder.
 
-Then install what you want:
-
-```
-/plugin install feedback-tools@ling-skills
-```
+Inside an interactive Claude Code session the slash-command equivalents work too
+(`/plugin marketplace add ling-app/ling-skills`). They are not available in the Claude desktop app,
+which answers `/plugin isn't available in this environment`.
 
 Later, to pick up everyone else's improvements:
 
 ```
-/plugin marketplace update ling-skills
+claude plugin marketplace update ling-skills
 ```
 
 Skills from a plugin are namespaced, so the one above runs as
