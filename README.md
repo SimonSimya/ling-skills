@@ -11,7 +11,7 @@ makes it better, everyone gets the better version instead of it dying on one lap
 Public repo, so no GitHub account and no access request. **Just tell Claude Code:**
 
 > Install the plugin marketplace at https://github.com/ling-app/ling-skills and then install the
-> feedback-tools plugin from it.
+> getting-started plugin from it.
 
 Then restart Claude Code, and the skill is loaded.
 
@@ -21,7 +21,7 @@ step and hands the commands back. Switch to a mode that asks permission, or run 
 
 ```
 claude plugin marketplace add ling-app/ling-skills
-claude plugin install feedback-tools@ling-skills --scope user
+claude plugin install getting-started@ling-skills --scope user
 ```
 
 `--scope user` installs it everywhere rather than in one folder.
@@ -36,17 +36,16 @@ Later, to pick up everyone else's improvements:
 claude plugin marketplace update ling-skills
 ```
 
-Skills from a plugin are namespaced, so the one above runs as
-`/feedback-tools:user-feedback-categorizer`.
+Skills from a plugin are namespaced, so the one above runs as `/getting-started:start-brain`.
 
 ## What's in it
 
 | Plugin | Skill | Privilege | What it does |
 |---|---|---|---|
+| `getting-started` | `start-brain` | draft-only | Turns an empty folder into a working Claude memory. Five questions, then it writes your `CLAUDE.md` and seeds a `memory/` folder. Start here if you are new. |
 | `feedback-tools` | `user-feedback-categorizer` | read-only | Turns a pile of reviews, survey answers or churn reasons into a ranked table of themes with owners and a top 3 to act on. |
 
-One skill is the right size to start. The library grows from the workshop, not from me
-pre-filling it.
+The library grows from the workshop, not from me pre-filling it.
 
 ## Add yours
 
