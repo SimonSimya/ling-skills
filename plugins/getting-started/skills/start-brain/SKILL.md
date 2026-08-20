@@ -77,6 +77,13 @@ people — and especially when I correct you — write it to `memory/` as its ow
 small file, and add a line for it to `memory/INDEX.md`. One fact per file.
 Don't ask permission, just do it and mention it in one line.
 Check `memory/` before telling me you don't know something.
+
+## How skills work here
+When we build a repeatable process together, or I bring one in from
+elsewhere, save it in this folder as `.claude/skills/<skill-name>/SKILL.md`
+— never in chat only, and never somewhere outside this folder. That path is
+what makes future sessions load it automatically; a skill saved anywhere
+else does not exist as far as this brain is concerned.
 ```
 
 **`memory/`** — create the folder and seed it with the first real fact from their answers (never a placeholder or a how-to file), plus `memory/INDEX.md` with one line pointing at it. Name the file in plain ASCII kebab-case, no spaces or slashes; if that name is already taken, append to the existing file rather than replacing it:
@@ -107,7 +114,7 @@ Close with exactly three lines, no more:
 
 ## Do Not
 
-- Create `projects/`, `areas/`, `notes/`, `docs/` or any other folder. One file and `memory/`. Structure gets added when a real workflow demands it, not before.
+- Create `projects/`, `areas/`, `notes/`, `docs/` or any other folder. One file and `memory/`. Structure gets added when a real workflow demands it, not before. (`.claude/skills/` is the one sanctioned later addition — created the day the first real skill lands, per the "How skills work here" block, not at setup.)
 - Copy in a template, clone a repo, or install anything.
 - Ask follow-up rounds of questions. One pass through the five (in one message by default, or one per turn if the user asked for that), then write. Never probe deeper on an answer.
 - Overwrite an existing `CLAUDE.md`.
@@ -115,7 +122,7 @@ Close with exactly three lines, no more:
 ## Definition of done
 
 **Pass condition.** After one run in an empty folder, the only files created are `./CLAUDE.md`,
-`./memory/INDEX.md`, and exactly one `./memory/<slug>.md`. `CLAUDE.md` carries all seven headings
+`./memory/INDEX.md`, and exactly one `./memory/<slug>.md`. `CLAUDE.md` carries all eight headings
 from the template and contains no `<angle-bracket>` placeholders left unfilled; `memory/INDEX.md`
 has one line pointing at the seeded fact file. Nothing else was created, and in a folder that was
 not empty, nothing that was already there was modified.
