@@ -42,7 +42,7 @@ If they answer thinly, take it and move on. A half-filled brain that exists beat
 
 ## Write The Files
 
-Two writes, no more.
+Two things get written — `CLAUDE.md` and `memory/` — and nothing else.
 
 **`CLAUDE.md`** — this exact shape, filled from their answers:
 
