@@ -9,6 +9,16 @@
   },
   "plugins": [
     {
+      "name": "getting-started",
+      "displayName": "Getting started",
+      "source": "./plugins/getting-started",
+      "description": "Turn an empty folder into a working Claude memory: a five-question interview, then a CLAUDE.md and a memory/ folder. No template, no PARA, nothing to maintain.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Simon Bacher"
+      }
+    },
+    {
       "name": "feedback-tools",
       "displayName": "User feedback categorizer",
       "source": "./plugins/feedback-tools",
