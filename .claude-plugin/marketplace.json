@@ -36,7 +36,9 @@
       "version": "1.0.0",
       "author": {
         "name": "Simon Bacher"
-      },    {
+      }
+    },
+    {
       "name": "meetings",
       "displayName": "Meeting notes sync",
       "source": "./plugins/meetings",
@@ -45,7 +47,6 @@
       "author": {
         "name": "Jarir Mallah"
       }
-    }
     }
   ]
 }
