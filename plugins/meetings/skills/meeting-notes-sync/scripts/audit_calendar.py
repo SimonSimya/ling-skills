@@ -48,14 +48,14 @@ def fetch_instances(days):
                   "start(dateTime),organizer(email,self),attendees(email))",
         "maxResults": 250,
     }
-    items, token = [], None
+    items, cursor = [], None
     while True:
-        if token:
-            params["pageToken"] = token
+        if cursor:
+            params["pageToken"] = cursor
         page = gws(["calendar", "events", "list"], params)
         items.extend(page.get("items", []))
-        token = page.get("nextPageToken")
-        if not token:
+        cursor = page.get("nextPageToken")
+        if not cursor:
             break
     return items
 
@@ -82,11 +82,11 @@ def series_key(title):
     parts = [p.strip() for p in title.split(" - ") if p.strip()]
     if len(parts) > 1:
         tail = normalize_title(parts[-1])
-        tokens = set(tail.split())
+        words = set(tail.split())
         looks_datey = (
-            any(m in tokens for m in MONTHS)
-            or any(t.isdigit() for t in tokens)
-            or (tokens and tokens <= OCCURRENCE_WORDS)
+            any(m in words for m in MONTHS)
+            or any(t.isdigit() for t in words)
+            or (words and words <= OCCURRENCE_WORDS)
         )
         if looks_datey:
             return normalize_title(" - ".join(parts[:-1]))

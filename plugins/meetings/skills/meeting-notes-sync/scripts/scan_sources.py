@@ -140,14 +140,14 @@ def list_children(folder_id, folders_only=False):
         "fields": "nextPageToken, files(id,name,mimeType,createdTime,webViewLink)",
         "pageSize": 200,
     }
-    files, token = [], None
+    files, cursor = [], None
     while True:
-        if token:
-            params["pageToken"] = token
+        if cursor:
+            params["pageToken"] = cursor
         page = gws(["drive", "files", "list"], params)
         files.extend(page.get("files", []))
-        token = page.get("nextPageToken")
-        if not token:
+        cursor = page.get("nextPageToken")
+        if not cursor:
             break
     return files
 
@@ -307,14 +307,14 @@ def fetch_events(start, end):
                   "organizer(email,self),creator(email,self))",
         "maxResults": 250,
     }
-    events, token = [], None
+    events, cursor = [], None
     while True:
-        if token:
-            params["pageToken"] = token
+        if cursor:
+            params["pageToken"] = cursor
         page = gws(["calendar", "events", "list"], params)
         events.extend(page.get("items", []))
-        token = page.get("nextPageToken")
-        if not token:
+        cursor = page.get("nextPageToken")
+        if not cursor:
             break
 
     out = []
