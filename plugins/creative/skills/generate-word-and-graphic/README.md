@@ -10,7 +10,7 @@ follow `SKILL.md`. This is the reference for what it is doing.
 
 - **Privilege level:** `can-send` — it writes only local files, but each image is a paid API
   call (≈ **$0.01**, range $0.006–$0.05).
-- **Owner:** Zinc (Growth Marketing) · questions and API keys: **#general**
+- **Owner:** Zinc (Vasu Laeietpiboon), Growth Marketing · questions and API keys: **#general**
 - **Needs:** Python 3.10+ and an `OPENAI_API_KEY`. Runs on macOS, Windows and Linux.
 
 ## Setup

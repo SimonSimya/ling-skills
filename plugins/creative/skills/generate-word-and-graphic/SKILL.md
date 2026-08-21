@@ -15,7 +15,7 @@ illustration next to it. Drop the PNG straight into After Effects, Premiere, Can
   API call on a key you supply, so it **spends money**. Roughly **$0.006–$0.05 per image**
   (default settings ≈ $0.01). A 20-word batch is about 20 cents. Nothing is sent anywhere and
   nothing is published.
-- **Owner:** Zinc (Growth Marketing). Ask in **#general** for a key or for help.
+- **Owner:** Zinc (Vasu Laeietpiboon), Growth Marketing. Ask in **#general** for a key or for help.
 - **Needs:** Python 3.10+ and an `OPENAI_API_KEY`. No other accounts or connections.
 - **Works on** macOS, Windows and Linux.
 
